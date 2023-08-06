@@ -8,19 +8,19 @@ let gAutoStopTimer = null
 let gListenPort = 8888
 let gListenAddress = "localhost"
 let gHostName = `${gListenAddress}`
+let gRequestClientCertificate = true
 
-let optDelayedReponseMs = 0
 let optAutoStopMs = 3600000 // 1 hour
 let gConfigPath = `${os.homedir()}/.myCerts`
 
 const usage = (message) => {
   if(message) console.error(`[31;1m${message}[m\n`)
-  console.error(`usage: ${process.argv[1]} [-n] [-p port] [-H hostname] [-D delayMs] [ -C configFolderPath ] ]
-	-p: port number (default: ${gListenPort})
+  console.error(`usage: ${process.argv[1]} [-p port] [-l listenAddress] [-H hostname] [-C configFolderPath] [-c] ]
+	-C: folder path for config (default: ${gConfigPath})
+	-c: client authentication with certificate (default: ${gRequestClientCertificate})
 	-l: listen address (default: ${gListenAddress})
 	-H: hostname (default: ${gHostName})
-	-n: non-secure, use http (default: use https)
-	-D: insert delay as millisec (default: 0 ms)
+	-p: port number (default: ${gListenPort})
 `)
   process.exit(1)
 }
@@ -39,14 +39,11 @@ while(process?.argv.length > 2 && process.argv[2].startsWith('-')) {
   } else if(arg === '-H') {
     if(! (gHostName = getNextArgument()))
       usage(`Error: server hostname not found`)
-  } else if(arg === '-n') {
-    optInSecure++
+  } else if(arg === '-c') {
+    gRequestClientCertificate = true
   } else if(arg === '-C') {
     if(! (gConfigPath = getNextArgument()))
       usage(`Error: gConfigPath not found`)
-  } else if(arg === '-D') {
-    if(! Number.isInteger(optDelayedReponseMs = getNextArgument()))
-      usage(`Error: delayed response is not number: ${optDelayedReponseMs}`)
   } else {
     usage("Error: unknown command line option:", arg)
   }
@@ -58,7 +55,7 @@ const options = { // TLS options
       || fs.readFileSync(`${gConfigPath}/cert.pem`)),
 
   // This is necessary only if using client certificate authentication.
-  requestCert: true,
+  requestCert: gRequestClientCertificate,
 
   // This is necessary only if the client uses a self-signed certificate.
   ca: Array.from({length: 10}).map((_, i) => {
