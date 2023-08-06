@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[ -f ca.key ] || {
+  echo -n "Create private key for CA as 'ca.key' ... "
+  openssl ecparam -name prime256v1 -genkey -noout -out ca.key || {
+    echo -e "\nError: can't create ca.key: $!" >&2
+    exit 1
+  }
+  echo done
+}
+
+[ -f ca.cert ] || {
+  echo -n "Create CSR for CA certificate as 'ca.csr' ... "
+  openssl req -new -key "ca.key" -out "ca.csr" -sha256 -subj '/CN=Local Test CA' || {
+    echo -e "\nError: can't create ca.csr: $!" >&2
+    exit 2
+  }
+  echo done
+}
+
+[ -f ca.conf ] || {
+  echo -n "Create openssl configuration for CA signing 'ca.conf' ... "
+  cat <<__EOF__ > ca.conf || {
+[root_ca]
+basicConstraints = critical,CA:TRUE,pathlen:1
+keyUsage = critical, nonRepudiation, cRLSign, keyCertSign
+subjectKeyIdentifier=hash
+__EOF__
+    echo -e "\nError: can't create ca.conf: $!" >&2
+    exit 3
+  }
+  echo done
+}
+
+[ -f ca.cert ] || {
+  echo -n "Create CA certificate 'ca.cert' ... "
+  openssl x509 -req -days 7 -in "ca.csr" -signkey "ca.key" -sha256 -out "ca.cert" -extfile "ca.conf" -extensions root_ca || {
+    echo -e "\nError: can't create ca.cert: $!" >&2
+    exit 4
+  }
+  echo done
+}
+
+[ -f client.conf ] || {
+  cat <<__EOF__ > client.conf || {
+[client]
+basicConstraints = CA:FALSE
+nsCertType = client, email
+nsComment = "Local Test Client Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, emailProtection
+__EOF__
+    echo -e "\nError: can't create client.conf: $!" >&2
+    exit 3
+  }
+  echo done
+}
+
+[ -f client-1.key ] || {
+  echo -n "Create private key for CLIENT as 'client-1.key' ... "
+  openssl ecparam -name prime256v1 -genkey -noout -out client-1.key || {
+    echo -e "\nError: can't create client-1.key: $!" >&2
+    exit 1
+  }
+  echo done
+}
+
+[ -f client-1.csr ] || {
+  echo -n "Create private key for CLIENT as 'client-1.csr' ... "
+  openssl req -new -key "client-1.key" -out "client-1.csr" -sha256 -subj '/CN=Test Client 1' || {
+    echo -e "\nError: can't create client-1.csr: $!" >&2
+    exit 1
+  }
+  echo done
+}
+
+[ -f client-1.cert ] || {
+  echo -n "Create private key for CLIENT as 'client-1.cert' ... "
+  openssl x509 -req -days 7 -in "client-1.csr" -sha256 -CA "ca.cert" -CAkey "ca.key" -CAcreateserial -out "client-1.cert" -extfile "client.conf" -extensions client || {
+    echo -e "\nError: can't create client-1.cert: $!" >&2
+    exit 1
+  }
+  echo done
+}
