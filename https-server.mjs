@@ -8,32 +8,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import {setTimeout} from 'node:timers/promises'
-import {loadMimeTypesFromOs} from './mime-types.mjs'
+import {initMimeTypes} from './mime-types.mjs'
 
 const defaultMimeType = 'application/octet-stream'
-let mimeTypes = {}
-const _myMimeTypes = {
-  'html': 'text/html',
-  'md': 'text/html',
-  'js': 'text/javascript',
-  'mjs': 'text/javascript',
-  'css': 'text/css',
-  'json': 'application/json',
-  'png': 'image/png',
-  'jpg': 'image/jpg',
-  'gif': 'image/gif',
-  'svg': 'image/svg+xml',
-  'wav': 'audio/wav',
-  'mp4': 'video/mp4',
-  'woff': 'application/font-woff',
-  'ttf': 'application/font-ttf',
-  'eot': 'application/vnd.ms-fontobject',
-  'otf': 'application/font-otf',
-  'txt': 'text/plain',
-
-  'uml': 'text/plain; charset=utf8',
-  'wasm': 'application/wasm',
-}
 
 let optDelayedReponseMs = 0
 let optAutoStopMs = 3600000 // 1 hour
@@ -89,13 +66,6 @@ while(process?.argv.length > 2 && process.argv[2].startsWith("-")) {
 
 // serving folder
 const dirPath = getNextArgument() || process.cwd()
-
-const initMimeTypes = async () => {
-  mimeTypes = await loadMimeTypesFromOs()
-  Object.keys(_myMimeTypes)
-  .filter(key => !(mimeTypes[key]))
-  .forEach(key => mimeTypes[key] = _myMimeTypes[key])
-}
 
 const getMimeTypeFromFileName = filePath =>
   (filePath && mimeTypes[String(path.extname(filePath)).toLowerCase().slice(1)])
@@ -191,7 +161,7 @@ protocol.createServer(options, async (request, response) => {
 console.info(`Serve folder:`, dirPath)
 console.info(`Config folder:`, gConfigPath)
 console.info(`Server running at ${optInSecure ? 'http' : 'https'}://${gHostName}:${gListenPort}/  listenAddress=${gListenAddress}`)
-await initMimeTypes()
+const mimeTypes = await initMimeTypes() // {}
 
 console.info(`Automatically stop server after ${optAutoStopMs / 60 / 1000} minutes`)
 autoStopServer()

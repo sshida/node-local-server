@@ -1,8 +1,30 @@
 import {readFile} from 'node:fs/promises'
 
-export const loadMimeTypesFromOs = async (mimeTypesFilePath = '/etc/mime.types') => {
-  const mimeTypes = {}
-  return Object.fromEntries(
+const _myMimeTypes = {
+  'txt': 'text/plain',
+  'html': 'text/html',
+  'md': 'text/html',
+  'js': 'text/javascript',
+  'mjs': 'text/javascript',
+  'css': 'text/css',
+  'json': 'application/json',
+  'png': 'image/png',
+  'jpg': 'image/jpg',
+  'gif': 'image/gif',
+  'svg': 'image/svg+xml',
+  'wav': 'audio/wav',
+  'mp4': 'video/mp4',
+  'otf': 'font/otf',
+  'ttf': 'font/ttf',
+  'woff': 'font/woff',
+  'eot': 'application/vnd.ms-fontobject',
+
+  'uml': 'text/plain',
+  'wasm': 'application/wasm',
+}
+
+const loadMimeTypesFromOs = async (mimeTypesFilePath = '/etc/mime.types') =>
+  Object.fromEntries(
     (await readFile(mimeTypesFilePath, {encoding: 'utf8'}))
     .split(/[\r\n]+/)
     .map(line => line.replace(/#.*/, ''))
@@ -15,6 +37,13 @@ export const loadMimeTypesFromOs = async (mimeTypesFilePath = '/etc/mime.types')
     .map(pair => pair[1].split(/\s+/).map(suffix => [suffix, pair[0]]))
     .flat()
   )
+
+export const initMimeTypes = async () => {
+  const mimeTypes = await loadMimeTypesFromOs()
+  Object.keys(_myMimeTypes)
+  .filter(key => !(mimeTypes[key]))
+  .forEach(key => mimeTypes[key] = _myMimeTypes[key])
+  return mimeTypes
 }
 
 // if(require.main !== module) { // CJS
