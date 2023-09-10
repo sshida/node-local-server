@@ -14,7 +14,7 @@ const defaultMimeType = 'application/octet-stream'
 
 let optDelayedReponseMs = 0
 let optAutoStopMs = 3600000 // 1 hour
-let gConfigPath = `${os.homedir()}/.myCerts`
+let gCertPath = `${os.homedir()}/.myCerts`
 
 const gChunkedThreashold = 2048 // chunked transfer for over 2048 bytes
 const gChunkSize = 1024
@@ -28,11 +28,12 @@ let gHostName = `${gListenAddress}`
 function usage(message) {
   if(message) console.error(`[31;1m${message}[m\n`)
   console.error(`usage: ${process.argv[1]} [-n] [-p port] [-H hostname] [-D delayMs] [ servingFolderPath [ configFolderPath ] ]
-	-p: port number (default: ${gListenPort})
-	-l: listen address (default: ${gListenAddress})
-	-H: hostname (default: ${gHostName})
-	-n: non-secure, use http (default: use https)
+        -C: cert folder path (default: ~/.myCerts/)
 	-D: insert delay as millisec (default: 0 ms)
+	-H: hostname (default: ${gHostName})
+	-l: listen address (default: ${gListenAddress})
+	-n: non-secure, use http (default: use https)
+	-p: port number (default: ${gListenPort})
 `)
   process.exit(1)
 }
@@ -54,8 +55,8 @@ while(process?.argv.length > 2 && process.argv[2].startsWith("-")) {
   } else if(arg === '-n') {
     optInSecure++
   } else if(arg === '-C') {
-    if(! (gConfigPath = getNextArgument()))
-      usage(`Error: gConfigPath not found`)
+    if(! (gCertPath = getNextArgument()))
+      usage(`Error: gCertPath not found`)
   } else if(arg === '-D') {
     if(! Number.isInteger(optDelayedReponseMs = getNextArgument()))
       usage(`Error: delayed response is not number: ${optDelayedReponseMs}`)
@@ -79,11 +80,11 @@ const autoStopServer = () => {
   }, optAutoStopMs)
 }
 
-const options = { // TLS options
-  key: optInSecure ? null : fs.readFileSync(`${gConfigPath}/privkey.pem`),
+const tlsParams = { // TLS options
+  key: optInSecure ? null : fs.readFileSync(`${gCertPath}/privkey.pem`),
   cert: optInSecure ? null : 
-    (fs.readFileSync(`${gConfigPath}/fullchain.pem`)
-      || fs.readFileSync(`${gConfigPath}/cert.pem`))
+    (fs.readFileSync(`${gCertPath}/fullchain.pem`)
+      || fs.readFileSync(`${gCertPath}/cert.pem`))
 }
 
 Array.prototype.cons = function(n = 2) {
@@ -94,7 +95,7 @@ Array.prototype.cons = function(n = 2) {
 }
 
 const protocol = optInSecure ? http : https
-protocol.createServer(options, async (request, response) => {
+protocol.createServer(tlsParams, async (request, response) => {
   autoStopServer() // automatically stop this server process
 
   const {socket, method, httpVersion, url, rawHeaders} = request
@@ -159,7 +160,7 @@ protocol.createServer(options, async (request, response) => {
 }).listen(gListenPort, gListenAddress);
 
 console.info(`Serve folder:`, dirPath)
-console.info(`Config folder:`, gConfigPath)
+console.info(`Config folder:`, gCertPath)
 console.info(`Server running at ${optInSecure ? 'http' : 'https'}://${gHostName}:${gListenPort}/  listenAddress=${gListenAddress}`)
 const mimeTypes = await initMimeTypes() // {}
 
