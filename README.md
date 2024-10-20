@@ -1,3 +1,5 @@
+古い。2024-10現在、[http-server-node](https://github.com/sshida/http-server-node)を使うこと
+
 # http-server-node
 
 ## https-server.mjs
